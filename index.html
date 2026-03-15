@@ -164,7 +164,7 @@ html,body{height:100%;overflow:hidden;font-family:'Chakra Petch',sans-serif;back
 
 function launchGame(id,name){
   const v=document.getElementById('gameView'),f=document.getElementById('gameFrame'),l=document.getElementById('gameLabel');
-  l.textContent=name.toUpperCase();f.src=`./games/${id}.html`;v.classList.add('active');
+  l.textContent=name.toUpperCase();f.src=id.endsWith('/')?`./games/${id}`:`./games/${id}.html`;;v.classList.add('active');
   history.pushState({game:id},'','');
 }
 function closeGame(){
