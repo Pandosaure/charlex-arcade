@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Brothers Defense 2</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/7.3.2/pixi.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Inter:wght@400;500;600;700&display=swap');
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{width:100%;height:100vh;overflow:hidden;background:#0c1018;user-select:none;position:fixed;inset:0;}
+  #c{display:block;margin:auto;image-rendering:auto;}
+
+  .lup{position:fixed;height:180px;left:3%;right:3%;background:linear-gradient(180deg,rgba(10,14,20,.98),rgba(20,27,37,.99));border:2px solid #c8a84b;border-radius:12px;transition:transform .3s cubic-bezier(.34,1.56,.64,1);z-index:100;display:flex;flex-direction:column;padding:10px 14px;box-shadow:0 0 30px rgba(0,0,0,.8);}
+  .lup.bot{bottom:0;transform:translateY(110%);border-radius:12px 12px 0 0;}
+  .lup.bot.on{transform:translateY(0);}
+  .lup.top{top:0;transform:translateY(-110%) rotate(180deg);border-radius:0 0 12px 12px;}
+  .lup.top.on{transform:translateY(0) rotate(180deg);}
+  .lh{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;}
+  .lt{font-family:'Cinzel',serif;font-size:11px;letter-spacing:3px;color:#c8a84b;}
+  .crow{display:flex;gap:6px;flex:1;}
+  .crd{flex:1;background:rgba(20,27,37,.9);border:1px solid #2a3a55;border-radius:8px;padding:8px;cursor:pointer;transition:all .2s;display:flex;flex-direction:column;font-family:'Inter',sans-serif;}
+  .crd:hover{border-color:#c8a84b;}
+  .crd.no{opacity:.35;cursor:default;}
+  .crd .rn{font-family:'Cinzel',serif;font-size:8px;letter-spacing:2px;margin-bottom:3px;color:#aaa;}
+  .crd .rn.rare{color:#4488ff;}
+  .crd .rn.epic{color:#bb66ff;text-shadow:0 0 6px rgba(187,102,255,.5);}
+  .crd .cn{font-size:10px;font-weight:600;color:#ccd;margin-bottom:2px;}
+  .crd .dd{font-size:9px;color:#789;line-height:1.3;flex:1;}
+  .crd .cp{font-family:'Cinzel',serif;font-size:9px;margin-top:4px;padding-top:4px;border-top:1px solid rgba(255,255,255,.06);}
+  .cp.f{color:#5c8;}.cp.g{color:#c8a84b;}.cp.e{color:#e55;}
+  .timer-ring{position:absolute;top:0;right:0;width:30px;height:30px;}
+  .timer-ring svg{transform:rotate(-90deg);}
+  .timer-ring .tv{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font:bold 10px 'Cinzel',serif;color:#e8d080;}
+  .toast{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) scale(.85);background:rgba(10,14,20,.96);border:2px solid #c8a84b;border-radius:12px;padding:12px 28px;z-index:200;opacity:0;transition:all .25s;font:bold 14px 'Cinzel',serif;color:#e8d080;text-align:center;pointer-events:none;white-space:nowrap;}
+  .toast.on{opacity:1;transform:translate(-50%,-50%) scale(1);}
+
+  /* BOSS SELECTION */
+  .boss-sel{position:fixed;inset:0;z-index:300;display:flex;flex-direction:column;background:#0a0e14;}
+  .boss-sel.hidden{display:none;}
+  .hidden{display:none!important;}
+  .bs-half{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:8px 12px;position:relative;overflow:hidden;}
+  .bs-half::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 50% 50%,rgba(200,168,75,.06) 0%,transparent 70%);pointer-events:none;}
+  .bs-top{transform:rotate(180deg);border-bottom:2px solid #c8a84b;}
+  .bs-bot{border-top:2px solid #c8a84b;}
+  .bs-title{font:bold 14px 'Cinzel',serif;letter-spacing:3px;color:#c8a84b;margin-bottom:10px;text-align:center;}
+  .bs-grid{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;max-width:95%;width:100%;}
+  .bs-card{flex:1;min-width:100px;max-width:180px;background:rgba(20,27,37,.95);border:2px solid #2a3a55;border-radius:10px;padding:8px 7px;cursor:pointer;transition:all .2s;text-align:center;position:relative;}
+  .bs-card:hover{border-color:#c8a84b;transform:scale(1.03);}
+  .bs-card.selected{border-color:#ffcc00;box-shadow:0 0 15px rgba(255,204,0,.4);background:rgba(40,35,15,.95);}
+  .bs-card.locked{opacity:.3;pointer-events:none;}
+  .bs-card .bi{margin-bottom:4px;}
+  .bs-card .bn{font:bold 11px 'Cinzel',serif;color:#e8d080;letter-spacing:1px;margin-bottom:3px;}
+  .bs-card .bst{font:11px monospace;color:#88ddaa;margin-bottom:4px;}
+  .bs-card .bd{font:10px 'Inter',sans-serif;color:#99aabb;line-height:1.35;margin-bottom:4px;}
+  .bs-card .bu{font:9px 'Inter',sans-serif;color:#c8a84b;line-height:1.25;border-top:1px solid rgba(200,168,75,.2);padding-top:3px;}
+  .bs-card .btag{position:absolute;top:3px;right:5px;font:7px 'Cinzel',serif;letter-spacing:1px;padding:1px 5px;border-radius:3px;}
+  .bs-status{font:bold 10px 'Cinzel',serif;letter-spacing:2px;color:#7a8a9a;margin-top:8px;height:18px;text-align:center;}
+  .bs-status.ready{color:#55c888;}
+</style>
+</head>
+<body>
+<!-- TITLE SCREEN -->
+<div id="titleScreen" style="position:fixed;inset:0;z-index:400;background:#0c1018;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;">
+  <img src="sprites/title-bg.jpg" style="max-width:90%;max-height:40vh;border-radius:12px;border:2px solid #c8a84b;box-shadow:0 0 40px rgba(200,168,75,.3);">
+  <div style="font-family:'Cinzel',serif;font-size:12px;color:#7a8a9a;letter-spacing:4px;text-transform:uppercase;">The Brothers Defend Again</div>
+  <button id="startBtn" style="margin-top:16px;padding:16px 60px;font-family:'Cinzel',serif;font-size:18px;font-weight:900;letter-spacing:6px;color:#0a0e14;background:linear-gradient(180deg,#e8d080,#c8a84b);border:none;border-radius:8px;cursor:pointer;text-transform:uppercase;animation:pulseBtn 1.5s infinite alternate;">START</button>
+  <div style="font-family:'Inter',sans-serif;font-size:10px;color:#334;margin-top:8px;">Tap START to begin</div>
+</div>
+<style>
+  @keyframes pulseBtn{0%{box-shadow:0 4px 20px rgba(200,168,75,.3)}100%{box-shadow:0 4px 30px rgba(200,168,75,.6),0 0 60px rgba(200,168,75,.2)}}
+</style>
+<canvas id="c"></canvas>
+<div class="lup bot" id="lu0">
+  <div class="lh"><span class="lt">⚔ LEVEL UP — P1</span><div class="timer-ring" id="tr0"><svg width="30" height="30"><circle class="ring" cx="15" cy="15" r="12" fill="none" stroke="#c8a84b" stroke-width="2.5" stroke-dasharray="75.4" stroke-dashoffset="0" stroke-linecap="round"/></svg><div class="tv">15</div></div></div>
+  <div class="crow" id="cr0"></div>
+</div>
+<div class="lup top" id="lu1">
+  <div class="lh"><span class="lt">⚔ LEVEL UP — P2</span><div class="timer-ring" id="tr1"><svg width="30" height="30"><circle class="ring" cx="15" cy="15" r="12" fill="none" stroke="#c8a84b" stroke-width="2.5" stroke-dasharray="75.4" stroke-dashoffset="0" stroke-linecap="round"/></svg><div class="tv">15</div></div></div>
+  <div class="crow" id="cr1"></div>
+</div>
+<!-- BOSS SELECTION SCREEN -->
+<div id="bossSelect" class="boss-sel">
+  <!-- P2 FIRST in DOM = top of screen (rotated 180° for face-to-face) -->
+  <div class="bs-half bs-top" id="bsP1">
+    <div class="bs-title">⚔ P2 — CHOOSE YOUR BOSS ⚔</div>
+    <div class="bs-grid" id="bgP1"></div>
+    <div class="bs-status" id="bsS1">Tap to select</div>
+  </div>
+  <!-- P1 SECOND in DOM = bottom of screen (normal orientation) -->
+  <div class="bs-half bs-bot" id="bsP0">
+    <div class="bs-title">⚔ P1 — CHOOSE YOUR BOSS ⚔</div>
+    <div class="bs-grid" id="bgP0"></div>
+    <div class="bs-status" id="bsS0">Tap to select</div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+<div id="gameOver" class="hidden" style="position:fixed;inset:0;background:rgba(10,14,20,.95);z-index:500;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:'Cinzel',serif;color:#e8d080;">
+  <div id="goText" style="font-size:36px;font-weight:900;text-shadow:0 0 20px rgba(255,204,0,.5);margin-bottom:12px;"></div>
+  <div id="goSub" style="font-size:14px;color:#99aabb;margin-bottom:24px;"></div>
+  <button onclick="location.reload()" style="padding:12px 40px;font-family:'Cinzel',serif;font-size:16px;font-weight:700;color:#0a0e14;background:linear-gradient(180deg,#e8d080,#c8a84b);border:none;border-radius:8px;cursor:pointer;letter-spacing:3px;">PLAY AGAIN</button>
+</div>
+<script src="bd2-config.js"></script>
+<script src="bd2-game.js"></script>
+</body>
+</html>
