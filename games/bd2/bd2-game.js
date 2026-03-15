@@ -83,7 +83,7 @@ function mkPlayer(){
 }
 const pl=[mkPlayer(),mkPlayer()];
 const units=[[],[]],projs=[],fx=[];
-let wave=0,wt=15,time=0,over=false,radial=null,gameStarted=false;
+let wave=0,wt=15,time=0,over=false,radial=[null,null],radialT=[0,0],gameStarted=false;
 let app,bgL,slotL,twL,unitL,projL,fxL,uiL;
 
 // ═══════════ INIT ═══════════
@@ -97,14 +97,16 @@ function init(){
     autoDensity:true,
   });
 
-  // Scale canvas with CSS to fill window, maintain aspect ratio
+  // Scale canvas to FILL entire screen (cover mode — no black bars)
   function resize(){
     const w=document.documentElement.clientWidth||innerWidth;
     const h=document.documentElement.clientHeight||innerHeight;
-    const sc=Math.min(w/VW,h/VH);
-    app.view.style.width=VW*sc+'px';
-    app.view.style.height=VH*sc+'px';
-    app.view.style.marginTop=Math.max(0,(h-VH*sc)/2)+'px';
+    const sc=Math.max(w/VW,h/VH); // cover: fill screen, clip overflow
+    const cw=VW*sc, ch=VH*sc;
+    app.view.style.width=cw+'px';
+    app.view.style.height=ch+'px';
+    app.view.style.marginLeft=((w-cw)/2)+'px';
+    app.view.style.marginTop=((h-ch)/2)+'px';
   }
   addEventListener('resize',resize);resize();
 
@@ -121,10 +123,17 @@ function init(){
 
   app.stage.eventMode='static';
   app.stage.hitArea=new PIXI.Rectangle(0,0,VW,VH);
-  app.stage.on('pointerdown',()=>killRadial());
+  app.stage.on('pointerdown',e=>{
+    const gy=e.global?e.global.y:e.data?.global?.y||VH/2;
+    const p=gy>=P1R*T?0:1; // which player's half
+    killRadial(p);
+  });
   document.addEventListener('pointerdown',e=>{
     if(e.target===app.view)return;
-    killRadial();
+    // Determine player from screen position
+    const rect=app.view.getBoundingClientRect();
+    const p=(e.clientY-rect.top)>=rect.height/2?0:1;
+    killRadial(p);
   });
 
   // Show boss selection screen before starting the game
@@ -364,7 +373,7 @@ function updHUD(){
 
 // ═══════════ RADIAL MENU ═══════════
 function onSlot(p,x,y){
-  killRadial();
+  killRadial(p);
   const tw=pl[p].tw.find(t=>t.x===x&&t.y===y);
   tw?upgRadial(p,tw):buildRadial(p,x,y);
 }
@@ -375,7 +384,7 @@ function buildRadial(p,x,y){
   const bg=new PIXI.Graphics();bg.beginFill(0x080c12,.6);bg.drawCircle(0,0,80);bg.endFill();
   bg.lineStyle(2,0xc8a84b,.4);bg.drawRoundedRect(-T/2+2,-T/2+2,T-4,T-4,3);
   bg.eventMode='static';bg.hitArea=new PIXI.Circle(0,0,80);
-  bg.on('pointerdown',e=>{e.stopPropagation();killRadial();});
+  bg.on('pointerdown',e=>{e.stopPropagation();killRadial(p);});
   c.addChild(bg);
   const ang=TK.length===4?[-Math.PI/2,0,Math.PI/2,Math.PI]:[-Math.PI/2,Math.PI/6,Math.PI*5/6];
   TK.forEach((k,i)=>{
@@ -392,12 +401,12 @@ function buildRadial(p,x,y){
     else{const ti=new PIXI.Text(d.ic,{fontSize:14});ti.anchor.set(.5);ti.y=-3;b.addChild(ti);}
     const tc=new PIXI.Text(d.c+'g',{fontFamily:'Cinzel',fontSize:8,fill:ok?0xc8a84b:0x555555});tc.anchor.set(.5);tc.y=13;b.addChild(tc);
     if(ok){b.eventMode='static';b.cursor='pointer';b.hitArea=new PIXI.Circle(0,0,26);
-      b.on('pointerdown',e=>{e.stopPropagation();placeTw(p,x,y,k);killRadial();});}
+      b.on('pointerdown',e=>{e.stopPropagation();placeTw(p,x,y,k);killRadial(p);});}
     else b.alpha=.3;
     c.addChild(b);
   });
   if(p===1)c.rotation=Math.PI; // face P2
-  radial=c;radialT=8;uiL.addChild(c);
+  radial[p]=c;radialT[p]=8;uiL.addChild(c);
 }
 
 function upgRadial(p,tw){
@@ -405,7 +414,7 @@ function upgRadial(p,tw){
   const c=new PIXI.Container();c.x=cx;c.y=cy;
   const bg=new PIXI.Graphics();bg.beginFill(0x080c12,.6);bg.drawCircle(0,0,80);bg.endFill();
   bg.eventMode='static';bg.hitArea=new PIXI.Circle(0,0,80);
-  bg.on('pointerdown',e=>{e.stopPropagation();killRadial();});
+  bg.on('pointerdown',e=>{e.stopPropagation();killRadial(p);});
   c.addChild(bg);
   const inf=new PIXI.Text(`${d.ic} Lv${tw.lv}`,{fontFamily:'Cinzel',fontSize:11,fill:d.cl});
   inf.anchor.set(.5);c.addChild(inf);
@@ -414,9 +423,9 @@ function upgRadial(p,tw){
   if(nx<=4){const ld=d.lv[nx],cost=Math.floor(d.c*(ld?.cm||.6));
     const gated=ld?.gate&&ps.gates[tw.type]<nx;const ok=!gated&&ps.g>=cost;
     items.push({lb:gated?'🔒':`Lv${nx}`,sub:gated?'Need card':`${cost}g`,col:ok?0x55c888:0x555,ok,
-      fn:()=>{upgTw(p,tw);killRadial();}});}
+      fn:()=>{upgTw(p,tw);killRadial(p);}});}
   items.push({lb:'Sell',sub:`+${Math.floor(tw.tc*.6)}g`,col:0xee8833,ok:true,
-    fn:()=>{sellTw(p,tw);killRadial();}});
+    fn:()=>{sellTw(p,tw);killRadial(p);}});
 
   const angs=items.length===1?[-Math.PI/2]:[-Math.PI/3,-Math.PI*2/3];
   items.forEach((it,i)=>{
@@ -432,11 +441,13 @@ function upgRadial(p,tw){
     c.addChild(b);
   });
   if(p===1)c.rotation=Math.PI; // face P2
-  radial=c;radialT=8;uiL.addChild(c);
+  radial[p]=c;radialT[p]=8;uiL.addChild(c);
 }
 
-function killRadial(){if(radial){uiL.removeChild(radial);radial=null;radialT=0;}}
-let radialT=0;
+function killRadial(p){
+  if(p!==undefined){if(radial[p]){uiL.removeChild(radial[p]);radial[p]=null;radialT[p]=0;}}
+  else{for(let i=0;i<2;i++)if(radial[i]){uiL.removeChild(radial[i]);radial[i]=null;radialT[i]=0;}}
+}
 
 // ═══════════ TOWERS ═══════════
 function placeTw(p,x,y,k){
@@ -448,11 +459,13 @@ function renderTw(p,tw){
   const d=TW[tw.type];if(tw.spr)twL.removeChild(tw.spr);
   const c=new PIXI.Container();
 
-  // Level glow effects at base
+  // Level glow effects at base — scale with level
   const g=new PIXI.Graphics();
-  if(tw.lv>=2){g.lineStyle(1,d.cl,.35);g.drawCircle(0,0,14);}
-  if(tw.lv>=3){g.lineStyle(1.5,0xffffff,.15);g.drawCircle(0,0,16);
-    g.beginFill(d.cl,.08);g.drawCircle(0,0,12);g.endFill();}
+  const glowR=12+tw.lv*3;
+  if(tw.lv>=2){g.lineStyle(1.5,d.cl,.35);g.drawCircle(0,0,glowR);}
+  if(tw.lv>=3){g.lineStyle(2,0xffffff,.15);g.drawCircle(0,0,glowR+3);
+    g.beginFill(d.cl,.08);g.drawCircle(0,0,glowR-2);g.endFill();}
+  if(tw.lv>=4){g.lineStyle(1,d.cl,.2);g.drawCircle(0,0,glowR+6);}
   c.addChild(g);
 
   // Tower sprite — use level-specific frames: TW_TEX[type][lv]
@@ -464,7 +477,9 @@ function renderTw(p,tw){
     tw._animFrames=frames; // store direct reference for animation
   }
   if(spr){
-    const displayW=T*(0.65+tw.lv*0.08);
+    // Clear size progression: Lv1=0.7, Lv2=0.85, Lv3=1.05, Lv4=1.25 of tile
+    const scaleByLv=[0, 0.70, 0.85, 1.05, 1.25]; // index 0 unused
+    const displayW=T*scaleByLv[tw.lv];
     const displayH=displayW*(spr.texture.height/spr.texture.width);
     spr.width=displayW;spr.height=displayH;
     tw._sprW=displayW;tw._sprH=displayH;
@@ -485,8 +500,8 @@ function renderTw(p,tw){
 
   c.x=GOX+(tw.x+.5)*T;c.y=(tw.y+.5)*T;
   if(p===1)c.rotation=Math.PI;
-  c.eventMode='static';c.cursor='pointer';c.hitArea=new PIXI.Circle(0,0,18);
-  c.on('pointerdown',e=>{e.stopPropagation();killRadial();upgRadial(p,tw);});
+  c.eventMode='static';c.cursor='pointer';c.hitArea=new PIXI.Circle(0,0,14+tw.lv*3);
+  c.on('pointerdown',e=>{e.stopPropagation();killRadial(p);upgRadial(p,tw);});
   tw.spr=c;twL.addChild(c);
 }
 function upgTw(p,tw){
@@ -1059,7 +1074,7 @@ function loop(delta){
   if(over)return;
   const dt=delta/60;time+=dt;
   updWaves(dt);updEco(dt);updTowers(dt);updProjs(dt);updUnits(dt);updLU(dt);updFX(dt);updHUD();
-  if(radial){radialT-=dt;if(radialT<=0)killRadial();}
+  for(let rp=0;rp<2;rp++){if(radial[rp]){radialT[rp]-=dt;if(radialT[rp]<=0)killRadial(rp);}}
   // Game ends only when a castle reaches 0 HP (handled in updUnits)
 }
 
