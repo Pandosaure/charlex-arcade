@@ -92,15 +92,18 @@ function init(){
     view:document.getElementById('c'),
     width:VW,height:VH,
     backgroundColor:0x1a2820,
-    antialias:true,
-    resolution:window.devicePixelRatio||1,
-    autoDensity:true,
+    antialias:false,
+    resolution:1,       // resolution:1 prevents WebGL crash on mobile
+    autoDensity:false,
   });
 
-  // Fill the ENTIRE screen — stretch canvas to viewport (no black bars ever)
+  // Cover-mode: fill entire screen, slight stretch OK for TD game
   function resize(){
-    app.view.style.width=innerWidth+'px';
-    app.view.style.height=innerHeight+'px';
+    const cv=app.view;
+    cv.style.position='fixed';
+    cv.style.left='0';cv.style.top='0';
+    cv.style.width=innerWidth+'px';
+    cv.style.height=innerHeight+'px';
   }
   addEventListener('resize',resize);resize();
 
@@ -118,13 +121,11 @@ function init(){
   app.stage.eventMode='static';
   app.stage.hitArea=new PIXI.Rectangle(0,0,VW,VH);
   app.stage.on('pointerdown',e=>{
-    // Determine which player's half was tapped
     const gy=e.global?e.global.y:(e.data?.global?.y||VH/2);
     killRadial(gy>=P1R*T?0:1);
   });
   document.addEventListener('pointerdown',e=>{
     if(e.target===app.view)return;
-    // Determine player from screen Y
     const p=(e.clientY>=innerHeight/2)?0:1;
     killRadial(p);
   });
@@ -451,7 +452,7 @@ function renderTw(p,tw){
   const d=TW[tw.type];if(tw.spr)twL.removeChild(tw.spr);
   const c=new PIXI.Container();
 
-  // Level glow effects — scale with level
+  // Level glow — scales with level
   const g=new PIXI.Graphics();
   const glowR=12+tw.lv*3;
   if(tw.lv>=2){g.lineStyle(1.5,d.cl,.35);g.drawCircle(0,0,glowR);}
@@ -460,7 +461,6 @@ function renderTw(p,tw){
   if(tw.lv>=4){g.lineStyle(1,d.cl,.2);g.drawCircle(0,0,glowR+6);}
   c.addChild(g);
 
-  // Tower sprite — use level-specific frames: TW_TEX[type][lv]
   const frames=(TW_TEX[tw.type]&&TW_TEX[tw.type][tw.lv])?TW_TEX[tw.type][tw.lv]:null;
   let spr;
   if(frames&&frames.length){
@@ -469,7 +469,7 @@ function renderTw(p,tw){
     tw._animFrames=frames;
   }
   if(spr){
-    // Visible size jump per level: Lv1=70%, Lv2=85%, Lv3=105%, Lv4=125% of tile
+    // Clear size jump: Lv1=70%, Lv2=85%, Lv3=105%, Lv4=125% of tile
     const scaleByLv=[0, 0.70, 0.85, 1.05, 1.25];
     const displayW=T*scaleByLv[tw.lv];
     const displayH=displayW*(spr.texture.height/spr.texture.width);
@@ -628,9 +628,11 @@ function spawnU(sender,type){
   let bd;
   if(uFrames&&uFrames.length){
     bd=new PIXI.Sprite(uFrames[0]);
-    const scale=(d.sz*2.5)/bd.texture.width; // scale based on unit size
+    // Use full sprite size: 1 tile wide for small units, up to 1.5 tiles for big ones
+    const targetW=T*(d.sz<=7?0.9:d.sz<=10?1.1:1.4);
+    const scale=targetW/bd.texture.width;
     bd.scale.set(scale);
-    bd.anchor.set(0.5,0.8); // bottom-center-ish
+    bd.anchor.set(0.5,0.8);
     u._uFrames=uFrames;u._uSpr=bd;u._walkT=0;
     u._sprScale=scale;
   }else{
@@ -642,13 +644,14 @@ function spawnU(sender,type){
   c.addChild(bd);
   // Player color ring around sprite units
   if(uFrames&&uFrames.length){
+    const ringW=bd.width*0.5, ringH=bd.width*0.2;
     const ring=new PIXI.Graphics();
     ring.lineStyle(1.5,sender===0?0x4488cc:0xcc4444,.6);
-    ring.drawEllipse(0,d.sz*0.3,d.sz*1.2,d.sz*0.4);
+    ring.drawEllipse(0,ringH*0.5,ringW,ringH);
     c.addChild(ring);
   }
   // Health bar - floating above the unit sprite
-  const hbY = -(d.sz*3+4); // well above the tallest part of sprite
+  const hbY = -(bd.height||d.sz*3)+(-6); // well above the tallest part of sprite
   const hb=new PIXI.Graphics();hb.beginFill(0x111824,.7);hb.drawRect(-9,hbY,18,3);hb.endFill();
   const hf=new PIXI.Graphics();hf.beginFill(0x5c8);hf.drawRect(-9,hbY,18,3);hf.endFill();
   c.addChild(hb,hf);u._hf=hf;u._hy=hbY;
@@ -1071,4 +1074,4 @@ function loop(delta){
 }
 
 // ═══════════ BOOT ═══════════
-loadAllSprites().catch(e => console.warn('Sprite load error:', e)).finally(() => init());
+loadAllSprites().catch(e=>console.warn('Sprite load error (game starts with fallbacks):',e)).finally(()=>init());
