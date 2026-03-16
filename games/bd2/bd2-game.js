@@ -97,16 +97,10 @@ function init(){
     autoDensity:true,
   });
 
-  // Scale canvas to FILL entire screen (cover mode — no black bars)
+  // Fill the ENTIRE screen — stretch canvas to viewport (no black bars ever)
   function resize(){
-    const w=document.documentElement.clientWidth||innerWidth;
-    const h=document.documentElement.clientHeight||innerHeight;
-    const sc=Math.max(w/VW,h/VH); // cover: fill screen, clip overflow
-    const cw=VW*sc, ch=VH*sc;
-    app.view.style.width=cw+'px';
-    app.view.style.height=ch+'px';
-    app.view.style.marginLeft=((w-cw)/2)+'px';
-    app.view.style.marginTop=((h-ch)/2)+'px';
+    app.view.style.width=innerWidth+'px';
+    app.view.style.height=innerHeight+'px';
   }
   addEventListener('resize',resize);resize();
 
@@ -124,15 +118,14 @@ function init(){
   app.stage.eventMode='static';
   app.stage.hitArea=new PIXI.Rectangle(0,0,VW,VH);
   app.stage.on('pointerdown',e=>{
-    const gy=e.global?e.global.y:e.data?.global?.y||VH/2;
-    const p=gy>=P1R*T?0:1; // which player's half
-    killRadial(p);
+    // Determine which player's half was tapped
+    const gy=e.global?e.global.y:(e.data?.global?.y||VH/2);
+    killRadial(gy>=P1R*T?0:1);
   });
   document.addEventListener('pointerdown',e=>{
     if(e.target===app.view)return;
-    // Determine player from screen position
-    const rect=app.view.getBoundingClientRect();
-    const p=(e.clientY-rect.top)>=rect.height/2?0:1;
+    // Determine player from screen Y
+    const p=(e.clientY>=innerHeight/2)?0:1;
     killRadial(p);
   });
 
@@ -388,13 +381,12 @@ function buildRadial(p,x,y){
   c.addChild(bg);
   const ang=TK.length===4?[-Math.PI/2,0,Math.PI/2,Math.PI]:[-Math.PI/2,Math.PI/6,Math.PI*5/6];
   TK.forEach((k,i)=>{
-    if(i>=ang.length)return; // safety
+    if(i>=ang.length)return;
     const d=TW[k],a=ang[i],ok=ps.g>=d.c;
     const bx=Math.cos(a)*54,by=Math.sin(a)*54;
     const b=new PIXI.Container();b.x=bx;b.y=by;
     const cr=new PIXI.Graphics();cr.beginFill(ok?0x141b25:0x0a0e14,.95);
     cr.lineStyle(2.5,ok?d.cl:0x333,.85);cr.drawCircle(0,0,24);cr.endFill();b.addChild(cr);
-    // Tower preview in radial button
     const frames=(TW_TEX[k]&&TW_TEX[k][1])?TW_TEX[k][1]:null;
     const tex=frames&&frames.length?frames[0]:null;
     if(tex){const rs=new PIXI.Sprite(tex);const sc=28/tex.height;rs.scale.set(sc);rs.anchor.set(.5,.6);rs.y=-2;b.addChild(rs);}
@@ -405,7 +397,7 @@ function buildRadial(p,x,y){
     else b.alpha=.3;
     c.addChild(b);
   });
-  if(p===1)c.rotation=Math.PI; // face P2
+  if(p===1)c.rotation=Math.PI;
   radial[p]=c;radialT[p]=8;uiL.addChild(c);
 }
 
@@ -440,7 +432,7 @@ function upgRadial(p,tw){
     else b.alpha=.35;
     c.addChild(b);
   });
-  if(p===1)c.rotation=Math.PI; // face P2
+  if(p===1)c.rotation=Math.PI;
   radial[p]=c;radialT[p]=8;uiL.addChild(c);
 }
 
@@ -459,7 +451,7 @@ function renderTw(p,tw){
   const d=TW[tw.type];if(tw.spr)twL.removeChild(tw.spr);
   const c=new PIXI.Container();
 
-  // Level glow effects at base — scale with level
+  // Level glow effects — scale with level
   const g=new PIXI.Graphics();
   const glowR=12+tw.lv*3;
   if(tw.lv>=2){g.lineStyle(1.5,d.cl,.35);g.drawCircle(0,0,glowR);}
@@ -472,13 +464,13 @@ function renderTw(p,tw){
   const frames=(TW_TEX[tw.type]&&TW_TEX[tw.type][tw.lv])?TW_TEX[tw.type][tw.lv]:null;
   let spr;
   if(frames&&frames.length){
-    spr=new PIXI.Sprite(frames[0]); // idle frame
+    spr=new PIXI.Sprite(frames[0]);
     tw._animSpr=spr;
-    tw._animFrames=frames; // store direct reference for animation
+    tw._animFrames=frames;
   }
   if(spr){
-    // Clear size progression: Lv1=0.7, Lv2=0.85, Lv3=1.05, Lv4=1.25 of tile
-    const scaleByLv=[0, 0.70, 0.85, 1.05, 1.25]; // index 0 unused
+    // Visible size jump per level: Lv1=70%, Lv2=85%, Lv3=105%, Lv4=125% of tile
+    const scaleByLv=[0, 0.70, 0.85, 1.05, 1.25];
     const displayW=T*scaleByLv[tw.lv];
     const displayH=displayW*(spr.texture.height/spr.texture.width);
     spr.width=displayW;spr.height=displayH;
