@@ -1071,4 +1071,4 @@ function loop(delta){
 }
 
 // ═══════════ BOOT ═══════════
-loadAllSprites().then(() => init());
+loadAllSprites().catch(e => console.warn('Sprite load error:', e)).finally(() => init());
