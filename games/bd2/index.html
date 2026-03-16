@@ -1,111 +1,188 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="fr">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>Brothers Defense 2</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/7.3.2/pixi.min.js"></script>
+<meta name="theme-color" content="#0a0a1a">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="manifest" href="./manifest.json">
+<title>🎮 Charlex Arcade</title>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Inter:wght@400;500;600;700&display=swap');
-  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
-  html,body{width:100%;height:100vh;overflow:hidden;background:#0c1018;user-select:none;position:fixed;inset:0;}
-  #c{display:block;margin:auto;image-rendering:auto;position:absolute;}
-
-  .lup{position:fixed;height:180px;left:5%;right:5%;background:linear-gradient(180deg,rgba(10,14,20,.96),rgba(20,27,37,.98));border:2px solid #c8a84b;border-radius:12px;transition:transform .35s cubic-bezier(.34,1.56,.64,1),opacity .25s;z-index:100;display:flex;flex-direction:column;padding:10px 14px;box-shadow:0 0 40px rgba(0,0,0,.9),0 0 80px rgba(0,0,0,.5);backdrop-filter:blur(4px);}
-  .lup.bot{bottom:15%;transform:translateY(calc(100% + 100vh));border-radius:12px;opacity:0;}
-  .lup.bot.on{transform:translateY(0);opacity:1;}
-  .lup.top{top:15%;transform:translateY(calc(-100% - 100vh)) rotate(180deg);border-radius:12px;opacity:0;}
-  .lup.top.on{transform:translateY(0) rotate(180deg);opacity:1;}
-  .lh{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;}
-  .lt{font-family:'Cinzel',serif;font-size:11px;letter-spacing:3px;color:#c8a84b;}
-  .crow{display:flex;gap:6px;flex:1;}
-  .crd{flex:1;background:rgba(20,27,37,.9);border:1px solid #2a3a55;border-radius:8px;padding:8px;cursor:pointer;transition:all .2s;display:flex;flex-direction:column;font-family:'Inter',sans-serif;}
-  .crd:hover{border-color:#c8a84b;}
-  .crd.no{opacity:.35;cursor:default;}
-  .crd .rn{font-family:'Cinzel',serif;font-size:8px;letter-spacing:2px;margin-bottom:3px;color:#aaa;}
-  .crd .rn.rare{color:#4488ff;}
-  .crd .rn.epic{color:#bb66ff;text-shadow:0 0 6px rgba(187,102,255,.5);}
-  .crd .cn{font-size:10px;font-weight:600;color:#ccd;margin-bottom:2px;}
-  .crd .dd{font-size:9px;color:#789;line-height:1.3;flex:1;}
-  .crd .cp{font-family:'Cinzel',serif;font-size:9px;margin-top:4px;padding-top:4px;border-top:1px solid rgba(255,255,255,.06);}
-  .cp.f{color:#5c8;}.cp.g{color:#c8a84b;}.cp.e{color:#e55;}
-  .timer-ring{position:absolute;top:0;right:0;width:30px;height:30px;}
-  .timer-ring svg{transform:rotate(-90deg);}
-  .timer-ring .tv{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font:bold 10px 'Cinzel',serif;color:#e8d080;}
-  .toast{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) scale(.85);background:rgba(10,14,20,.96);border:2px solid #c8a84b;border-radius:12px;padding:12px 28px;z-index:200;opacity:0;transition:all .25s;font:bold 14px 'Cinzel',serif;color:#e8d080;text-align:center;pointer-events:none;white-space:nowrap;}
-  .toast.on{opacity:1;transform:translate(-50%,-50%) scale(1);}
-
-  /* BOSS SELECTION */
-  .boss-sel{position:fixed;inset:0;z-index:300;display:flex;flex-direction:column;background:#0a0e14;}
-  .boss-sel.hidden{display:none;}
-  .hidden{display:none!important;}
-  .bs-half{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:8px 12px;position:relative;overflow:hidden;}
-  .bs-half::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 50% 50%,rgba(200,168,75,.06) 0%,transparent 70%);pointer-events:none;}
-  .bs-top{transform:rotate(180deg);border-bottom:2px solid #c8a84b;}
-  .bs-bot{border-top:2px solid #c8a84b;}
-  .bs-title{font:bold 14px 'Cinzel',serif;letter-spacing:3px;color:#c8a84b;margin-bottom:10px;text-align:center;}
-  .bs-grid{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;max-width:95%;width:100%;}
-  .bs-card{flex:1;min-width:100px;max-width:180px;background:rgba(20,27,37,.95);border:2px solid #2a3a55;border-radius:10px;padding:8px 7px;cursor:pointer;transition:all .2s;text-align:center;position:relative;}
-  .bs-card:hover{border-color:#c8a84b;transform:scale(1.03);}
-  .bs-card.selected{border-color:#ffcc00;box-shadow:0 0 15px rgba(255,204,0,.4);background:rgba(40,35,15,.95);}
-  .bs-card.locked{opacity:.3;pointer-events:none;}
-  .bs-card .bi{margin-bottom:4px;}
-  .bs-card .bn{font:bold 11px 'Cinzel',serif;color:#e8d080;letter-spacing:1px;margin-bottom:3px;}
-  .bs-card .bst{font:11px monospace;color:#88ddaa;margin-bottom:4px;}
-  .bs-card .bd{font:10px 'Inter',sans-serif;color:#99aabb;line-height:1.35;margin-bottom:4px;}
-  .bs-card .bu{font:9px 'Inter',sans-serif;color:#c8a84b;line-height:1.25;border-top:1px solid rgba(200,168,75,.2);padding-top:3px;}
-  .bs-card .btag{position:absolute;top:3px;right:5px;font:7px 'Cinzel',serif;letter-spacing:1px;padding:1px 5px;border-radius:3px;}
-  .bs-status{font:bold 10px 'Cinzel',serif;letter-spacing:2px;color:#7a8a9a;margin-top:8px;height:18px;text-align:center;}
-  .bs-status.ready{color:#55c888;}
+@import url('https://fonts.googleapis.com/css2?family=Russo+One&family=Chakra+Petch:wght@400;600;700&family=Press+Start+2P&display=swap');
+:root{--neon-cyan:#00eaff;--neon-pink:#ff3366;--neon-gold:#ffaa00;--neon-green:#00ff88;--neon-purple:#aa44ff;--bg-deep:#060612;--bg-card:#0d0d24;--bg-card-hover:#141438;--text-dim:#5566aa;--safe-top:env(safe-area-inset-top,0px);--safe-bottom:env(safe-area-inset-bottom,0px)}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden;font-family:'Chakra Petch',sans-serif;background:var(--bg-deep);color:#fff}
+.bg-layer{position:fixed;inset:0;z-index:0;overflow:hidden}
+.bg-layer::before{content:'';position:absolute;inset:-50%;background:radial-gradient(ellipse 600px 400px at 20% 30%,rgba(0,234,255,.06) 0%,transparent 70%),radial-gradient(ellipse 500px 500px at 80% 70%,rgba(255,51,102,.05) 0%,transparent 70%),radial-gradient(ellipse 400px 300px at 50% 50%,rgba(170,68,255,.04) 0%,transparent 70%);animation:bgPulse 12s ease-in-out infinite alternate}
+@keyframes bgPulse{0%{transform:translate(0,0) scale(1)}100%{transform:translate(-3%,2%) scale(1.05)}}
+.grid-overlay{position:fixed;inset:0;z-index:0;background-image:linear-gradient(rgba(0,234,255,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(0,234,255,.03) 1px,transparent 1px);background-size:60px 60px;mask-image:linear-gradient(180deg,transparent 0%,rgba(0,0,0,.4) 30%,rgba(0,0,0,.4) 70%,transparent 100%)}
+.particle{position:fixed;width:3px;height:3px;border-radius:50%;background:var(--neon-cyan);opacity:0;z-index:0;animation:floatUp linear infinite}
+@keyframes floatUp{0%{opacity:0;transform:translateY(100vh) scale(0)}10%{opacity:.6}90%{opacity:.3}100%{opacity:0;transform:translateY(-10vh) scale(1)}}
+.app{position:relative;z-index:1;height:100%;display:flex;flex-direction:column;padding-top:var(--safe-top);padding-bottom:var(--safe-bottom)}
+.header{padding:20px 24px 12px;flex-shrink:0}
+.header-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px}
+.logo{display:flex;align-items:center;gap:12px}
+.logo-icon{width:48px;height:48px;background:linear-gradient(135deg,var(--neon-cyan),var(--neon-purple));border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:24px;box-shadow:0 4px 20px rgba(0,234,255,.3);animation:iconGlow 3s ease-in-out infinite alternate}
+@keyframes iconGlow{0%{box-shadow:0 4px 20px rgba(0,234,255,.3)}100%{box-shadow:0 4px 30px rgba(170,68,255,.4)}}
+.logo-text h1{font-family:'Russo One',sans-serif;font-size:20px;letter-spacing:3px;background:linear-gradient(135deg,var(--neon-cyan),#fff,var(--neon-pink));background-size:200% 100%;-webkit-background-clip:text;-webkit-text-fill-color:transparent;animation:textShimmer 4s ease infinite}
+@keyframes textShimmer{0%,100%{background-position:0% 50%}50%{background-position:100% 50%}}
+.logo-text p{font-size:10px;color:var(--text-dim);font-family:'Press Start 2P',monospace;letter-spacing:1px}
+.stats-badge{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:8px 14px;text-align:center}
+.stats-badge .count{font-family:'Russo One',sans-serif;font-size:20px;color:var(--neon-gold);text-shadow:0 0 12px rgba(255,170,0,.4)}
+.stats-badge .label{font-size:8px;color:var(--text-dim);font-family:'Press Start 2P',monospace;margin-top:2px}
+.games-section{flex:1;overflow-y:auto;overflow-x:hidden;padding:8px 20px 100px;scroll-behavior:smooth;-webkit-overflow-scrolling:touch}
+.section-label{font-family:'Press Start 2P',monospace;font-size:9px;color:var(--neon-cyan);letter-spacing:3px;text-transform:uppercase;margin:16px 0 12px 4px;display:flex;align-items:center;gap:10px}
+.section-label::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,rgba(0,234,255,.3),transparent)}
+.game-card{position:relative;background:var(--bg-card);border:1px solid rgba(255,255,255,.06);border-radius:18px;padding:18px;margin-bottom:14px;display:flex;gap:16px;cursor:pointer;transition:all .3s cubic-bezier(.4,0,.2,1);overflow:hidden}
+.game-card:active{background:var(--bg-card-hover);transform:translateY(-2px);box-shadow:0 8px 32px rgba(0,0,0,.4)}
+.game-thumb{width:80px;height:80px;border-radius:14px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:36px;position:relative;overflow:hidden}
+.game-info{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center}
+.game-title{font-family:'Russo One',sans-serif;font-size:16px;letter-spacing:1px;margin-bottom:4px}
+.game-desc{font-size:12px;color:var(--text-dim);line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.game-tags{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+.tag{font-family:'Press Start 2P',monospace;font-size:7px;padding:3px 8px;border-radius:6px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);color:var(--text-dim);white-space:nowrap}
+.tag.hot{background:rgba(255,51,102,.1);border-color:rgba(255,51,102,.3);color:var(--neon-pink)}
+.tag.new{background:rgba(0,255,136,.1);border-color:rgba(0,255,136,.3);color:var(--neon-green)}
+.play-btn{width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#ff3366,#aa1144);display:flex;align-items:center;justify-content:center;align-self:center;flex-shrink:0;font-size:18px;box-shadow:0 4px 16px rgba(255,51,102,.3)}
+.empty-slot{border:2px dashed rgba(255,255,255,.08);border-radius:18px;padding:30px;text-align:center;margin-bottom:14px}
+.empty-slot .icon{font-size:32px;margin-bottom:10px;opacity:.4}.empty-slot .text{font-size:12px;color:var(--text-dim);line-height:1.6}.empty-slot .hint{font-family:'Press Start 2P',monospace;font-size:8px;color:rgba(255,255,255,.15);margin-top:8px}
+.install-banner{position:fixed;bottom:0;left:0;right:0;z-index:50;padding:16px 20px calc(16px + var(--safe-bottom));background:linear-gradient(180deg,transparent,rgba(6,6,18,.95) 20%);display:flex;align-items:center;gap:12px}
+.install-banner.hidden{display:none}
+.install-text{flex:1;font-size:12px;color:var(--text-dim);line-height:1.4}.install-text strong{color:#fff}
+.install-btn{background:linear-gradient(135deg,var(--neon-green),#00cc66);color:#000;border:none;padding:10px 20px;border-radius:12px;font-family:'Chakra Petch',sans-serif;font-weight:700;font-size:13px;cursor:pointer;white-space:nowrap;box-shadow:0 4px 16px rgba(0,255,136,.3)}
+.install-close{background:none;border:none;color:var(--text-dim);font-size:20px;cursor:pointer;padding:4px}
+#gameView{position:fixed;inset:0;z-index:100;background:#000;display:none;flex-direction:column}
+#gameView.active{display:flex}
+#gameView .toolbar{background:rgba(10,10,26,.95);padding:8px 16px;padding-top:calc(8px + var(--safe-top));display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(255,255,255,.06);flex-shrink:0}
+#gameView .toolbar .back-btn{background:rgba(255,255,255,.08);border:none;color:#fff;padding:8px 16px;border-radius:10px;font-family:'Chakra Petch',sans-serif;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px}
+#gameView .toolbar .game-label{font-family:'Russo One',sans-serif;font-size:14px;color:var(--neon-cyan);letter-spacing:1px}
+#gameView .toolbar .fullscreen-btn{background:none;border:1px solid rgba(255,255,255,.15);color:#fff;padding:8px;border-radius:8px;font-size:16px;cursor:pointer}
+#gameView iframe{flex:1;border:none;width:100%;background:#0a0a2e}
+@media(min-width:700px){.app{max-width:600px;margin:0 auto}}
 </style>
 </head>
 <body>
-<!-- TITLE SCREEN -->
-<div id="titleScreen" style="position:fixed;inset:0;z-index:400;background:linear-gradient(180deg,#0c1018 0%,#1a1a2e 40%,#0c1018 100%);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;">
-  <div id="titleArt" style="width:280px;height:160px;border-radius:14px;border:2px solid #c8a84b;box-shadow:0 0 50px rgba(200,168,75,.25);background:linear-gradient(135deg,#1a2a1a,#0a1a2a,#2a1a2a);display:flex;align-items:center;justify-content:center;overflow:hidden;">
-    <img src="sprites/title-bg.jpg" style="width:100%;height:100%;object-fit:cover;" onerror="this.style.display='none';this.parentElement.innerHTML='<div style=\'text-align:center;padding:20px\'><div style=\'font-size:48px;margin-bottom:8px\'>⚔🏰⚔</div><div style=\'font-family:Cinzel,serif;font-size:22px;font-weight:900;color:#c8a84b;letter-spacing:4px;text-shadow:0 0 20px rgba(200,168,75,.5)\'>BD2</div></div>';">
+<div class="bg-layer"></div>
+<div class="grid-overlay"></div>
+
+<div class="app">
+  <header class="header">
+    <div class="header-top">
+      <div class="logo">
+        <div class="logo-icon">🎮</div>
+        <div class="logo-text">
+          <h1>CHARLEX ARCADE</h1>
+          <p>NOS JEUX</p>
+        </div>
+      </div>
+      <div class="stats-badge">
+        <div class="count" id="gameCount">3</div>
+        <div class="label">JEUX</div>
+      </div>
+    </div>
+  </header>
+
+  <div class="games-section">
+    <div class="section-label">📂 Notre Collection</div>
+
+    <div class="game-card" onclick="launchGame('bd2/','Brothers Defense 2')">
+      <div class="game-thumb" style="background:linear-gradient(135deg,#0a1a0a,#1a3a1a);padding:0;overflow:hidden"><div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:32px;background:linear-gradient(135deg,#1a2a1a,#0a1a2a)">⚔🏰</div></div>
+      <div class="game-info">
+        <div class="game-title">BROTHERS DEFENSE 2 <span style="font-size:10px;color:var(--text-dim);font-family:'Press Start 2P',monospace">v2.0</span></div>
+        <div class="game-desc">Tower Defense 1v1 face-à-face — choisis ton boss, construis des tours, envoie des vagues, détruis le château adverse !</div>
+        <div class="game-tags">
+          <span class="tag new">✨ NOUVEAU</span>
+          <span class="tag hot">🔥 HOT</span>
+          <span class="tag">1v1</span>
+          <span class="tag">TOWER DEFENSE</span>
+          <span class="tag">BOSS</span>
+          <span class="tag">AUGMENTS</span>
+        </div>
+      </div>
+      <div class="play-btn">▶</div>
+    </div>
+
+    <div class="game-card" onclick="launchGame('brothers-defense','Brothers Defense')">
+      <div class="game-thumb" style="background:linear-gradient(135deg,#1a0a0a,#3a1a2a)">⚔️</div>
+      <div class="game-info">
+        <div class="game-title">BROTHERS DEFENSE <span style="font-size:10px;color:var(--text-dim);font-family:'Press Start 2P',monospace">v1.0</span></div>
+        <div class="game-desc">Tower Defense 1v1 — construis des tours, envoie des dragons, détruis le château adverse !</div>
+        <div class="game-tags">
+          <span class="tag">1v1</span>
+          <span class="tag">TOWER DEFENSE</span>
+          <span class="tag">VAGUES</span>
+          <span class="tag">DRAGONS</span>
+        </div>
+      </div>
+      <div class="play-btn">▶</div>
+    </div>
+
+    <div class="game-card" onclick="launchGame('archer-arena','ArcherBro2')">
+      <div class="game-thumb" style="background:linear-gradient(135deg,#0a0a2a,#1a1040)">🏹</div>
+      <div class="game-info">
+        <div class="game-title">ARCHERBRO 2 <span style="font-size:10px;color:var(--text-dim);font-family:'Press Start 2P',monospace">v1.6</span></div>
+        <div class="game-desc">ArcherBro2 1v1 — l'archer esquive et tire, le maître invoque des monstres et contrôle les boss !</div>
+        <div class="game-tags">
+          <span class="tag">1v1</span>
+          <span class="tag">ARCHERO</span>
+          <span class="tag">BOSS</span>
+          <span class="tag">AUGMENTS</span>
+        </div>
+      </div>
+      <div class="play-btn">▶</div>
+    </div>
+
+    <div class="section-label" style="margin-top:24px">🔮 Prochainement</div>
+    <div class="empty-slot">
+      <div class="icon">🚀</div>
+      <div class="text">De nouveaux jeux arrivent bientôt !<br>Demandez à Papa de créer le prochain avec Claude.</div>
+      <div class="hint">EMPLACEMENT LIBRE</div>
+    </div>
   </div>
-  <div style="font-family:'Cinzel',serif;font-size:24px;font-weight:900;color:#e8d080;letter-spacing:6px;text-shadow:0 0 30px rgba(200,168,75,.4);">BROTHERS DEFENSE 2</div>
-  <div style="font-family:'Cinzel',serif;font-size:12px;color:#7a8a9a;letter-spacing:4px;text-transform:uppercase;">The Brothers Defend Again</div>
-  <button id="startBtn" style="margin-top:16px;padding:16px 60px;font-family:'Cinzel',serif;font-size:18px;font-weight:900;letter-spacing:6px;color:#0a0e14;background:linear-gradient(180deg,#e8d080,#c8a84b);border:none;border-radius:8px;cursor:pointer;text-transform:uppercase;animation:pulseBtn 1.5s infinite alternate;">START</button>
-  <div style="font-family:'Inter',sans-serif;font-size:10px;color:#556;margin-top:8px;">Tap START to begin</div>
 </div>
-<style>
-  @keyframes pulseBtn{0%{box-shadow:0 4px 20px rgba(200,168,75,.3)}100%{box-shadow:0 4px 30px rgba(200,168,75,.6),0 0 60px rgba(200,168,75,.2)}}
-</style>
-<canvas id="c"></canvas>
-<div class="lup bot" id="lu0">
-  <div class="lh"><span class="lt">⚔ LEVEL UP — P1</span><div class="timer-ring" id="tr0"><svg width="30" height="30"><circle class="ring" cx="15" cy="15" r="12" fill="none" stroke="#c8a84b" stroke-width="2.5" stroke-dasharray="75.4" stroke-dashoffset="0" stroke-linecap="round"/></svg><div class="tv">15</div></div></div>
-  <div class="crow" id="cr0"></div>
+
+<div class="install-banner hidden" id="installBanner">
+  <div class="install-text"><strong>Installer l'appli</strong><br>Ajoute Charlex Arcade sur ton écran d'accueil !</div>
+  <button class="install-btn" onclick="installApp()">Installer</button>
+  <button class="install-close" onclick="dismissInstall()">✕</button>
 </div>
-<div class="lup top" id="lu1">
-  <div class="lh"><span class="lt">⚔ LEVEL UP — P2</span><div class="timer-ring" id="tr1"><svg width="30" height="30"><circle class="ring" cx="15" cy="15" r="12" fill="none" stroke="#c8a84b" stroke-width="2.5" stroke-dasharray="75.4" stroke-dashoffset="0" stroke-linecap="round"/></svg><div class="tv">15</div></div></div>
-  <div class="crow" id="cr1"></div>
-</div>
-<!-- BOSS SELECTION SCREEN -->
-<div id="bossSelect" class="boss-sel">
-  <!-- P2 FIRST in DOM = top of screen (rotated 180° for face-to-face) -->
-  <div class="bs-half bs-top" id="bsP1">
-    <div class="bs-title">⚔ P2 — CHOOSE YOUR BOSS ⚔</div>
-    <div class="bs-grid" id="bgP1"></div>
-    <div class="bs-status" id="bsS1">Tap to select</div>
+
+<div id="gameView">
+  <div class="toolbar">
+    <button class="back-btn" onclick="closeGame()">← Retour</button>
+    <span class="game-label" id="gameLabel">JEU</span>
+    <button class="fullscreen-btn" onclick="toggleFullscreen()">⛶</button>
   </div>
-  <!-- P1 SECOND in DOM = bottom of screen (normal orientation) -->
-  <div class="bs-half bs-bot" id="bsP0">
-    <div class="bs-title">⚔ P1 — CHOOSE YOUR BOSS ⚔</div>
-    <div class="bs-grid" id="bgP0"></div>
-    <div class="bs-status" id="bsS0">Tap to select</div>
-  </div>
+  <iframe id="gameFrame" sandbox="allow-scripts allow-same-origin" allowfullscreen></iframe>
 </div>
-<div class="toast" id="toast"></div>
-<div id="gameOver" class="hidden" style="position:fixed;inset:0;background:rgba(10,14,20,.95);z-index:500;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:'Cinzel',serif;color:#e8d080;">
-  <div id="goText" style="font-size:36px;font-weight:900;text-shadow:0 0 20px rgba(255,204,0,.5);margin-bottom:12px;"></div>
-  <div id="goSub" style="font-size:14px;color:#99aabb;margin-bottom:24px;"></div>
-  <button onclick="location.reload()" style="padding:12px 40px;font-family:'Cinzel',serif;font-size:16px;font-weight:700;color:#0a0e14;background:linear-gradient(180deg,#e8d080,#c8a84b);border:none;border-radius:8px;cursor:pointer;letter-spacing:3px;">PLAY AGAIN</button>
-</div>
-<script src="bd2-config.js"></script>
-<script src="bd2-game.js"></script>
+
+<script>
+// Particles
+(function(){const b=document.body;const c=['var(--neon-cyan)','var(--neon-pink)','var(--neon-purple)','var(--neon-gold)'];for(let i=0;i<15;i++){const p=document.createElement('div');p.className='particle';p.style.left=Math.random()*100+'%';p.style.background=c[Math.floor(Math.random()*c.length)];p.style.animationDuration=(8+Math.random()*12)+'s';p.style.animationDelay=(Math.random()*10)+'s';p.style.width=p.style.height=(2+Math.random()*3)+'px';b.appendChild(p)}})();
+
+function launchGame(id,name){
+  const v=document.getElementById('gameView'),f=document.getElementById('gameFrame'),l=document.getElementById('gameLabel');
+  l.textContent=name.toUpperCase();
+  // Support both folder-based games (id ends with /) and single-file games
+  f.src=id.includes('/')?`./games/${id}`:`./games/${id}.html`;
+  v.classList.add('active');
+  history.pushState({game:id},'','');
+}
+function closeGame(){
+  document.getElementById('gameFrame').src='';
+  document.getElementById('gameView').classList.remove('active');
+}
+function toggleFullscreen(){if(!document.fullscreenElement)document.documentElement.requestFullscreen().catch(()=>{});else document.exitFullscreen()}
+
+let deferredPrompt=null;const ib=document.getElementById('installBanner');
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredPrompt=e;ib.classList.remove('hidden')});
+function installApp(){if(deferredPrompt){deferredPrompt.prompt();deferredPrompt.userChoice.then(c=>{if(c.outcome==='accepted')ib.classList.add('hidden');deferredPrompt=null})}else{alert("Pour installer :\n\n📱 Android/Chrome :\nMenu ⋮ → 'Ajouter à l'écran d'accueil'\n\n🍎 iPhone/Safari :\nPartager ↗ → 'Sur l'écran d'accueil'")}}
+function dismissInstall(){ib.classList.add('hidden')}
+if(window.matchMedia('(display-mode: standalone)').matches||window.navigator.standalone)ib.classList.add('hidden');
+if('serviceWorker' in navigator)navigator.serviceWorker.register('./sw.js').then(r=>console.log('SW:',r.scope)).catch(e=>console.log('SW err:',e));
+window.addEventListener('popstate',()=>{if(document.getElementById('gameView').classList.contains('active'))closeGame()});
+</script>
 </body>
 </html>
