@@ -1,10 +1,13 @@
-const CACHE_NAME = 'charlex-arcade-v18';
+const CACHE_NAME = 'charlex-arcade-v19';
 const urlsToCache = [
   './',
   './index.html',
   './games/brothers-defense.html',
   './games/archer-arena.html',
-  './games/bd2.html'
+  './games/bd2/',
+  './games/bd2/bd2-config.js',
+  './games/bd2/bd2-game.js',
+  './games/bd2/manifest.json'
 ];
 
 self.addEventListener('install', event => {
@@ -25,15 +28,15 @@ self.addEventListener('activate', event => {
 
 self.addEventListener('fetch', event => {
   event.respondWith(
-    caches.match(event.request).then(response => {
-      if (response) return response;
-      return fetch(event.request).then(fetchResponse => {
+    // Network-first: always try fresh version, fall back to cache if offline
+    fetch(event.request)
+      .then(fetchResponse => {
         if (fetchResponse && fetchResponse.status === 200) {
           const responseClone = fetchResponse.clone();
           caches.open(CACHE_NAME).then(cache => cache.put(event.request, responseClone));
         }
         return fetchResponse;
-      });
-    }).catch(() => caches.match('./index.html'))
+      })
+      .catch(() => caches.match(event.request).then(r => r || caches.match('./index.html')))
   );
 });
