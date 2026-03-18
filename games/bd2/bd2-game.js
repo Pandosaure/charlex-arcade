@@ -139,18 +139,16 @@ function init(){
     autoDensity:false,
   });
 
-  // Contain-mode: maintain aspect ratio, force landscape dimensions, center
+  // Contain-mode: fit canvas to actual screen, maintain aspect ratio, center
   function resize(){
     const cv=app.view;
-    // Use the larger dimension as width (landscape logic)
-    const sw=Math.max(innerWidth,innerHeight);
-    const sh=Math.min(innerWidth,innerHeight);
-    const sc=Math.min(sw/VW,sh/VH);
+    const w=innerWidth, h=innerHeight;
+    const sc=Math.min(w/VW,h/VH);
     const cw=VW*sc, ch=VH*sc;
     cv.style.width=cw+'px';
     cv.style.height=ch+'px';
-    cv.style.left=((sw-cw)/2)+'px';
-    cv.style.top=((sh-ch)/2)+'px';
+    cv.style.left=((w-cw)/2)+'px';
+    cv.style.top=((h-ch)/2)+'px';
   }
   addEventListener('resize',resize);resize();
 
