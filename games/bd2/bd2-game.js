@@ -15,6 +15,48 @@ function sliceSheet(baseTex, info){
   return frames;
 }
 
+// Strip checkerboard/grey backgrounds from sprite textures at load time
+function cleanTexture(baseTex){
+  try{
+    const src=baseTex.resource?.source||baseTex.baseTexture?.resource?.source;
+    if(!src)return baseTex;
+    const w=baseTex.width,h=baseTex.height;
+    if(!w||!h)return baseTex;
+    const cv=document.createElement('canvas');cv.width=w;cv.height=h;
+    const ctx=cv.getContext('2d');ctx.drawImage(src,0,0);
+    const img=ctx.getImageData(0,0,w,h);const d=img.data;
+    // Sample corners to detect background color
+    const corners=[[0,0],[w-1,0],[0,h-1],[w-1,h-1]];
+    let sr=0,sg=0,sb=0,cnt=0;
+    for(const[cx,cy]of corners){const i=(cy*w+cx)*4;
+      if(d[i+3]>200){sr+=d[i];sg+=d[i+1];sb+=d[i+2];cnt++;}}
+    if(cnt===0)return baseTex;
+    sr=Math.round(sr/cnt);sg=Math.round(sg/cnt);sb=Math.round(sb/cnt);
+    // Detect if background looks like checkerboard (grey-ish, not transparent)
+    const isGrey=Math.abs(sr-sg)<30&&Math.abs(sg-sb)<30;
+    if(!isGrey)return baseTex; // Not a checkerboard, leave alone
+    const tol=35;
+    for(let i=0;i<d.length;i+=4){
+      const dr=Math.abs(d[i]-sr),dg=Math.abs(d[i+1]-sg),db=Math.abs(d[i+2]-sb);
+      if(dr<tol&&dg<tol&&db<tol)d[i+3]=0;
+    }
+    ctx.putImageData(img,0,0);
+    return PIXI.Texture.from(cv);
+  }catch(e){return baseTex;}
+}
+
+// Slice sheet then clean each frame's background
+function sliceAndClean(baseTex, info){
+  const cleaned=cleanTexture(baseTex);
+  const fw=cleaned.width/info.cols;
+  const fh=cleaned.height/info.rows;
+  const frames=[];
+  for(let i=0;i<info.frames;i++){
+    frames.push(new PIXI.Texture(cleaned, new PIXI.Rectangle(i*fw,0,fw,fh)));
+  }
+  return frames;
+}
+
 async function loadAllSprites(){
   const resp = await fetch('manifest.json');
   const manifest = await resp.json();
@@ -24,7 +66,7 @@ async function loadAllSprites(){
     TW_TEX[type] = TW_TEX[type] || {};
     for(const [lv, info] of Object.entries(levels)){
       const tex = await PIXI.Assets.load(info.file);
-      TW_TEX[type][lv] = sliceSheet(tex, info);
+      TW_TEX[type][lv] = sliceAndClean(tex, info);
     }
   }
 
@@ -33,13 +75,13 @@ async function loadAllSprites(){
     if(info.file){
       // Simple single sheet
       const tex = await PIXI.Assets.load(info.file);
-      UN_TEX[type] = sliceSheet(tex, info);
+      UN_TEX[type] = sliceAndClean(tex, info);
     } else {
       // Has walk/action sub-sheets
       UN_TEX[type] = {};
       for(const [action, sheet] of Object.entries(info)){
         const tex = await PIXI.Assets.load(sheet.file);
-        UN_TEX[type][action] = sliceSheet(tex, sheet);
+        UN_TEX[type][action] = sliceAndClean(tex, sheet);
       }
     }
   }
@@ -54,13 +96,13 @@ async function loadAllSprites(){
         const lv1 = levels["1"];
         if(lv1){
           const tex = await PIXI.Assets.load(lv1.file);
-          BOSS_TEX[boss][action] = sliceSheet(tex, lv1);
+          BOSS_TEX[boss][action] = sliceAndClean(tex, lv1);
         }
         // Store all evolution levels for future use
         BOSS_TEX[boss][action+'Levels'] = {};
         for(const [lv, info] of Object.entries(levels)){
           const tex = await PIXI.Assets.load(info.file);
-          BOSS_TEX[boss][action+'Levels'][lv] = sliceSheet(tex, info);
+          BOSS_TEX[boss][action+'Levels'][lv] = sliceAndClean(tex, info);
         }
       }
     }
@@ -97,13 +139,18 @@ function init(){
     autoDensity:false,
   });
 
-  // Cover-mode: fill entire screen, slight stretch OK for TD game
+  // Contain-mode: maintain aspect ratio, force landscape dimensions, center
   function resize(){
     const cv=app.view;
-    cv.style.position='fixed';
-    cv.style.left='0';cv.style.top='0';
-    cv.style.width=innerWidth+'px';
-    cv.style.height=innerHeight+'px';
+    // Use the larger dimension as width (landscape logic)
+    const sw=Math.max(innerWidth,innerHeight);
+    const sh=Math.min(innerWidth,innerHeight);
+    const sc=Math.min(sw/VW,sh/VH);
+    const cw=VW*sc, ch=VH*sc;
+    cv.style.width=cw+'px';
+    cv.style.height=ch+'px';
+    cv.style.left=((sw-cw)/2)+'px';
+    cv.style.top=((sh-ch)/2)+'px';
   }
   addEventListener('resize',resize);resize();
 
