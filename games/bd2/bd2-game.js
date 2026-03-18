@@ -210,6 +210,9 @@ function selectBoss(p,key){
 }
 
 function startGame(){
+  // Show the game canvas
+  app.view.style.visibility='visible';
+  app.view.style.pointerEvents='auto';
   // Hide boss selection
   document.getElementById('bossSelect').classList.add('hidden');
 
